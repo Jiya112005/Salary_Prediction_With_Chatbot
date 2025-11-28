@@ -6,7 +6,6 @@ import json
 import time
 import random
 import altair as alt
-
 # ---------- CONFIGURATION & SECRETS ----------
 
 try:
@@ -17,8 +16,8 @@ except KeyError:
     API_KEY = ""
 
 # API Setup
-GEMINI_MODEL_NAME = "gemini-2.5-flash-preview-09-2025"
-API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL_NAME}:generateContent?key={API_KEY}"
+GEMINI_MODEL_NAME = "gemini-2.0-flash"
+API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL_NAME}:generateContent?key={API_KEY}"   # <<< FIXED
 MAX_RETRIES = 5
 BASE_DELAY = 1.0
 
@@ -98,14 +97,24 @@ def get_llm_response(prompt, system_instruction):
         return "LLM Error: API Key is missing. Cannot provide analysis or chat functionality.", []
     
     payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "config":{
-            "temperature":0.5,
-            "tools":[{"googleSearch":{}}]
-        },
-        "systemInstruction": system_instruction,
+    "systemInstruction": {                                   # <<< FIXED
+        "role": "system",
+        "parts": [{"text": system_instruction}]
+    },
+    "contents": [
+        {
+            "role": "user",
+            "parts": [{"text": prompt}]
         }
-    
+    ],
+    "generationConfig": {
+        "temperature": 0.5
+    },
+    "tools": [
+        {"googleSearchRetrieval": {}}                        # <<< KEPT
+    ]
+    }
+
     response_data = call_gemini_api(payload)
     
     if response_data and response_data.get('candidates'):
@@ -124,6 +133,8 @@ if 'last_prediction' not in st.session_state:
     st.session_state.last_prediction = None
 if 'last_prediction_context_message' not in st.session_state:
     st.session_state.last_prediction_context_message = None
+if 'new_prediction_made' not in st.session_state:
+    st.session_state.new_prediction_made = True
 
 
 # ---------- GLOBAL STYLING (User's original styles) ----------
